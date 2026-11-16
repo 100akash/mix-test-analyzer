@@ -2,8 +2,9 @@
    The page sends {id, path, body}; the worker answers {id, out} where out is a JSON string.
    Files never leave this tab. */
 const q = new URL(self.location.href).searchParams;
-// The full distribution (with numpy, scipy, matplotlib). The npm path has only the core files.
-const BASE = q.get("pyodide") || "https://cdn.jsdelivr.net/pyodide/v0.29.4/full/";
+// Pyodide 0.29.4 and the packages the engine needs are served from this site (vendor/pyodide/),
+// so the tool does not depend on a third-party CDN. ?pyodide=<url> points to another copy.
+const BASE = q.get("pyodide") || new URL("../vendor/pyodide/", self.location.href).href;
 const VER = q.get("v") || "";
 const FILES = ["core.py", "parse.py", "specs.py", "methods.py", "report.py", "routes.py"];
 importScripts(BASE + "pyodide.js");
