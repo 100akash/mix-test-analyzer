@@ -222,7 +222,7 @@ TESTS = {
         "table": ["Pmax", "Gf_pre", "S", "LCI"],
         "refs": ["Draft ASTM. Simplified low-temperature semicircular bend (SLT-SCB) test. Technical note draft.",
                  "Modi, S.H., Bajaj, A., Dave, E.V., Sias, J.E., Al-Qadi, I.L., Lambros, J., and Tormos, S. (2026). Development of a simplified low-temperature SCB test protocol to characterise cracking potential of airfield mixtures. International Journal of Pavement Engineering, 27(1). https://doi.org/10.1080/10298436.2026.2698794",
-                 "Bajaj, A., Modi, S.H., Al-Qadi, I.L., Dave, E.V., Lambros, J., and Sias, J.E. (in press). Lab and field validation of simplified low-temperature SCB test for airfield asphalt mixtures. Journal of Transportation Engineering, Part B: Pavements."],
+                 "Bajaj, A., Modi, S.H., Al-Qadi, I.L., Dave, E.V., Lambros, J., and Sias, J.E. (2027). Lab and field validation of a simplified low-temperature SCB test for airfield asphalt mixtures. Journal of Transportation Engineering, Part B: Pavements, 153(1). https://doi.org/10.1061/JPEODX.PVENG-2246"],
     },
     "dct": {
         "name": "DCT",
