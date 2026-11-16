@@ -6,10 +6,6 @@ Work in kN*mm is the same as J.
 import math
 import numpy as np
 
-try:
-    from scipy.optimize import curve_fit
-except Exception:  # scipy is loaded by the worker; keep import errors readable
-    curve_fit = None
 
 
 # ---------------------------------------------------------------- basics
@@ -207,6 +203,8 @@ DONUT_FB = [0.20, 0.15, 0.10, 0.06, 0.03, 0.02, 0.01]
 
 
 def _fit_one(uu, pp, p0, lo, hi):
+    # Imported here so the engine can start before scipy has loaded in the browser.
+    from scipy.optimize import curve_fit
     p0 = np.clip(np.asarray(p0, float), np.asarray(lo) + 1e-9, np.asarray(hi) - 1e-9)
     p, _ = curve_fit(gauss4, uu, pp, p0=p0, bounds=(lo, hi), maxfev=20000)
     return p

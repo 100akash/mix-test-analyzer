@@ -12,21 +12,24 @@ importScripts(BASE + "pyodide.js");
 // openpyxl is pure Python and not part of the Pyodide distribution, so its wheels ship in vendor/.
 const VENDOR = { openpyxl: ["et_xmlfile-2.0.0-py3-none-any.whl", "openpyxl-3.1.5-py2.py3-none-any.whl"] };
 let py;
-const loaded = new Set();
-async function need(pkgs) {
-  const todo = pkgs.filter((p) => !loaded.has(p));
-  if (!todo.length) return;
-  const urls = [];
-  todo.forEach((p) => (VENDOR[p] ? VENDOR[p].forEach((w) => urls.push(new URL("../vendor/" + w, self.location.href).href)) : urls.push(p)));
-  const errs = [];
-  await py.loadPackage(urls, { errorCallback: (m) => errs.push(m), messageCallback: () => {} });
-  if (errs.length) throw new Error("Could not load " + todo.join(", ") + ". " + errs.join(" "));
-  todo.forEach((p) => loaded.add(p));
+const loading = new Map();  // package -> promise, so each one loads once
+function need(pkgs) {
+  return Promise.all(pkgs.map((p) => {
+    if (!loading.has(p)) {
+      const urls = VENDOR[p] ? VENDOR[p].map((w) => new URL("../vendor/" + w, self.location.href).href) : [p];
+      const errs = [];
+      loading.set(p, py.loadPackage(urls, { errorCallback: (m) => errs.push(m), messageCallback: () => {} }).then(() => {
+        if (errs.length) throw new Error("Could not load " + p + ". " + errs.join(" "));
+      }).catch((err) => { loading.delete(p); throw err; }));  // a later request tries again
+    }
+    return loading.get(p);
+  }));
 }
 
+// Start-up loads only what the first steps need (Pyodide, numpy and the engine), so the page opens fast.
 const ready = (async () => {
   py = await loadPyodide({ indexURL: BASE });
-  await need(["numpy", "scipy"]);
+  await need(["numpy"]);
   const root = new URL("../engine/", self.location.href);
   for (const f of FILES) {
     const r = await fetch(new URL(f, root).href + (VER ? "?v=" + VER : ""));
@@ -37,12 +40,17 @@ const ready = (async () => {
   return py.globals.get("routes").handle_json;
 })();
 
+// Then, while the user picks a test and adds files: scipy for the fits, and the Excel and PDF
+// packages for export. A route that needs one of them waits for it.
+const later = ready.then(() => need(["scipy"]));
+later.then(() => need(["openpyxl"])).then(() => need(["matplotlib"])).catch(() => {});
+const NEEDS = { preview: ["scipy"], run: ["scipy"], export: ["scipy", "openpyxl", "matplotlib"] };
+
 self.onmessage = async (e) => {
   const { id, path, body, xlsx } = e.data;
   try {
     const handle = await ready;
-    if (path === "export") await need(["openpyxl", "matplotlib"]);
-    if (path === "parse" && xlsx) await need(["openpyxl"]);
+    await need((NEEDS[path] || []).concat(path === "parse" && xlsx ? ["openpyxl"] : []));
     self.postMessage({ id, out: handle(path, body || "") });
   } catch (err) {
     self.postMessage({ id, out: JSON.stringify({ ok: false, error: "The calculation engine did not load. " + (err && err.message ? err.message : err) }) });
