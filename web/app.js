@@ -170,33 +170,67 @@
         <span class="std">${esc(x.standard)}</span>
         <p class="small muted">Not available yet.</p>
       </article>`).join("");
-    const di = DOMAINS.findIndex((d) => d[0] === S.domain);
-    const slider = `<div class="tslider" role="radiogroup" aria-label="Temperature domain" data-i="${di}">
-      <div class="tsl-track" aria-hidden="true"></div>
-      ${DOMAINS.map(([d, l, sub]) => `<button class="tsl-stop" role="radio" data-act="domain" data-d="${d}" aria-checked="${S.domain === d}" tabindex="${S.domain === d ? 0 : -1}">
-        <i class="tsl-dot" aria-hidden="true"></i><b>${l}</b><span>${sub}</span><small>${S.order[d].map((k) => esc(S.specs[k].name)).join(", ")}</small></button>`).join("")}
-    </div>`;
     return `<section class="stack"><h1>Choose your test</h1>
-      <p class="lead">Pick the temperature domain, record the test temperature, then select the test you ran. You only process the test you need.</p></section>
-      <section class="card">
-        <div class="stack"><span class="label">Temperature domain</span>${slider}</div>
-        <div class="stack tempin"><span class="label">Test temperature (record only)</span>
-            <div class="row"><input type="text" inputmode="decimal" class="num" id="temp" value="${esc(S.temp)}" aria-label="Test temperature">
-              <div class="seg" role="group" aria-label="Temperature unit"><button data-act="tunit" data-u="C" aria-pressed="${S.tempUnit === "C"}">°C</button><button data-act="tunit" data-u="F" aria-pressed="${S.tempUnit === "F"}">°F</button></div></div>
-            <span class="small muted">The usual temperature is on each card.</span>
-          </div>
+      <p class="lead">Enter the test temperature or pick a range, then select the test you ran. You only process the test you need.</p></section>
+      <section class="card tcard-scale">
+        <h2>Test temperature</h2>
+        ${scaleHTML()}
+        <div class="row tempin"><input type="text" inputmode="decimal" class="num" id="temp" value="${esc(S.temp)}" aria-label="Test temperature">
+          <div class="seg" role="group" aria-label="Temperature unit"><button data-act="tunit" data-u="C" aria-pressed="${S.tempUnit === "C"}">°C</button><button data-act="tunit" data-u="F" aria-pressed="${S.tempUnit === "F"}">°F</button></div>
+          <span class="small muted">Typing a temperature that is clearly low, intermediate or high picks that range. The temperature is recorded in the report.</span></div>
       </section>
       <section class="tests">${cards}</section>
       <div class="foot"><span>Selected: <strong>${esc(sp.name)}</strong> at ${esc(S.temp || "–")} °${S.tempUnit}</span>
         <button class="btn primary" data-go="2">Continue to upload</button></div>`;
   }
-  // temperature domains: key, label, what the tests in it address, usual starting temperature (°C)
-  const DOMAINS = [["low", "Low", "Thermal cracking", -12], ["service", "Intermediate", "Fatigue cracking", 25], ["high", "High", "Rutting", 50]];
-  function setDomain(d) {
+  // Temperature ranges: key, label, usual temperature (°C), drawn from/to (°C) on the scale.
+  const DOMAINS = [["low", "Low", -12, -40, 5], ["service", "Intermediate", 25, 5, 35], ["high", "High", 50, 35, 70]];
+  const SCALE = [-40, 70];  // °C shown on the scale
+  const toC = (v, u) => (u === "F" ? (v - 32) * 5 / 9 : v);
+  const fromC = (c, u) => (u === "F" ? c * 9 / 5 + 32 : c);
+  const tempC = () => { const v = parseFloat(String(S.temp).replace(",", ".")); return isFinite(v) ? toC(v, S.tempUnit) : null; };
+  // A typed temperature picks a range only when it is clearly inside one. Between 0 and 10 °C and
+  // between 30 and 40 °C the range stays as it is, so the user picks it.
+  const clearDomain = (c) => (c == null ? null : c <= 0 ? "low" : c >= 10 && c <= 30 ? "service" : c >= 40 ? "high" : null);
+  const minus = (v) => String(v).replace(/^-/, "−");  // typographic minus for display
+  const clampC = (c) => Math.min(SCALE[1], Math.max(SCALE[0], c));
+  const pct = (c) => (100 * (clampC(c) - SCALE[0]) / (SCALE[1] - SCALE[0])).toFixed(2);
+  // On phones the three ranges get equal widths, so positions are mapped range by range.
+  const pctPhone = (c) => {
+    c = clampC(c);
+    const i = DOMAINS.findIndex(([, , , a, b]) => c <= b), [, , , a, b] = DOMAINS[i < 0 ? 2 : i];
+    return ((100 / 3) * ((i < 0 ? 2 : i) + (c - a) / (b - a))).toFixed(2);
+  };
+  const posStyle = (c) => `--l:${pct(c)}%;--lp:${pctPhone(c)}%`;
+  function scaleHTML() {
+    const u = S.tempUnit, c = tempC();
+    const ticks = u === "F" ? [-40, -20, 0, 20, 40, 60, 80, 100, 120, 140, 160] : [-40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70];
+    const zones = DOMAINS.map(([d, l, typ, a, b]) => `<button class="tzone z-${d}" role="radio" data-act="domain" data-d="${d}" aria-checked="${S.domain === d}" tabindex="${S.domain === d ? 0 : -1}" style="--w:${b - a}">
+        <b>${l}</b><span>${minus(fromC(typ, u).toFixed(0))} °${u} typical</span><small>${S.order[d].map((k) => esc(S.specs[k].name)).join(", ")}</small></button>`).join("");
+    const hid = c == null ? " hidden" : "", at = posStyle(c == null ? 0 : c);
+    return `<div class="tscale">
+      <div class="tmark${hid}" id="tmark" style="${at}" aria-hidden="true">${esc(S.temp)} °${u}</div>
+      <div class="tzones" role="radiogroup" aria-label="Temperature range">${zones}</div>
+      <div class="ttrack" aria-hidden="true"><i class="tdot${hid}" id="tdot" style="${at}"></i></div>
+      <div class="tticks" aria-hidden="true">${ticks.map((v) => `<span style="${posStyle(toC(v, u))}">${minus(v)}</span>`).join("")}</div>
+    </div>`;
+  }
+  function moveMarker() {
+    const c = tempC();
+    ["#tmark", "#tdot"].forEach((q) => {
+      const m = app.querySelector(q); if (!m) return;
+      m.classList.toggle("hidden", c == null);
+      if (c != null) m.setAttribute("style", posStyle(c));
+    });
+    const m = app.querySelector("#tmark"); if (m && c != null) m.textContent = `${S.temp} °${S.tempUnit}`;
+  }
+  function setDomain(d, keepTemp) {
     if (S.domain === d) return;
     S.domain = d; S.test = S.order[d][0];
-    const c = DOMAINS.find((x) => x[0] === d)[3];
-    S.temp = (S.tempUnit === "F" ? c * 9 / 5 + 32 : c).toFixed(1);
+    // Tapping a range sets its usual temperature, unless the entered one already sits in that range
+    // (or within 5 °C of its edge, for tests run near a boundary).
+    const c = tempC(), [, , typ, a, b] = DOMAINS.find((x) => x[0] === d);
+    if (!keepTemp && (c == null || c < a - 5 || c > b + 5)) S.temp = fromC(typ, S.tempUnit).toFixed(1);
     resetForTest();
   }
   const fmtRate = (r) => (r < 0.01 ? String(r) : String(+r.toFixed(3)));
@@ -976,7 +1010,7 @@
 
   /* ------------------------------------------------------------ events */
   app.addEventListener("keydown", (e) => {
-    const t = e.target.closest(".tsl-stop");
+    const t = e.target.closest(".tzone");
     if (!t) return;
     const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
     if (step == null && e.key !== "Home" && e.key !== "End") return;
@@ -984,7 +1018,7 @@
     const i = DOMAINS.findIndex((d) => d[0] === S.domain);
     const j = e.key === "Home" ? 0 : e.key === "End" ? DOMAINS.length - 1 : Math.min(DOMAINS.length - 1, Math.max(0, i + step));
     setDomain(DOMAINS[j][0]); render();
-    const n = app.querySelector(`.tsl-stop[data-d="${DOMAINS[j][0]}"]`); if (n) n.focus();
+    const n = app.querySelector(`.tzone[data-d="${DOMAINS[j][0]}"]`); if (n) n.focus();
   });
   app.addEventListener("click", (e) => {
     const t = e.target.closest("[data-act],[data-go]");
@@ -1060,9 +1094,24 @@
     } else if (t.id === "fileinput") { await addFiles(t.files); t.value = ""; }
     else if (t.dataset.dim || t.dataset.av || t.dataset.lig || t.dataset.label) { render(); refreshPreview(50); }
   });
+  let tempTimer = null;
   app.addEventListener("input", (e) => {
     const t = e.target;
-    if (t.id === "temp" || t.id === "temp2") { S.temp = t.value; return; }
+    if (t.id === "temp" || t.id === "temp2") {
+      S.temp = t.value;
+      if (t.id === "temp") {
+        moveMarker();
+        clearTimeout(tempTimer);
+        tempTimer = setTimeout(() => {
+          const d = clearDomain(tempC());
+          if (!d || d === S.domain || S.step !== 1) return;
+          const pos = t.selectionStart;
+          setDomain(d, true); render();
+          const n = app.querySelector("#temp"); if (n) { n.focus(); n.setSelectionRange(pos, pos); }
+        }, 450);
+      }
+      return;
+    }
     if (t.dataset.batch) { S.batch[t.dataset.batch] = t.value; return; }
     if (t.dataset.label) { S.labels[t.dataset.label] = t.value; return; }
     if (t.dataset.av) { dimRow(t.dataset.av).av.vals[0] = t.value; return; }
