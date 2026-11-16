@@ -2,6 +2,16 @@
 
 Major updates get a new version. Small fixes and tweaks between versions are not listed.
 
+## v0.2 (November 2026)
+
+Renamed from Cracking Test Analyzer to Mix Test Analyzer, since the tool now covers rutting too.
+
+- Tests: HT-IDT (ASTM D8666-26) and IDEAL-RT (ASTM D8360-22) at high temperature. IDEAL-RT can also report RT<sub>Index</sub> at 7% air voids for field cores (D8360 Note 11).
+- Test step: the temperature domain is a Low, Intermediate and High slider (thermal cracking, fatigue cracking, rutting). HWTT and APA are shown as coming soon.
+- Examples: lab records for SLT-SCB, and synthetic SCB and IDT strength sets back-calculated from published means.
+- Upload: a Clear files button in the steps bar. Time is optional for every test.
+- New link: akashto.com/mix-test-analyzer. The old link forwards to it.
+
 ## v0.1 (November 2026)
 
 First release.

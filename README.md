@@ -78,7 +78,7 @@ No public raw curves were found for these tests. The example curves are made to 
 
 ## Cite
 
-Bajaj, A. (2026). *Mix Test Analyzer* (Version 0.1). https://akashto.com/mix-test-analyzer/
+Bajaj, A. (2026). *Mix Test Analyzer* (Version 0.2). https://akashto.com/mix-test-analyzer/
 
 ## Credits
 
@@ -102,7 +102,7 @@ Fonts: IBM Plex Sans, IBM Plex Mono and Overpass from Google Fonts.
 
 ## Versions
 
-The current version is v0.1. See [CHANGELOG.md](CHANGELOG.md). Major updates get a new version.
+The current version is v0.2. See [CHANGELOG.md](CHANGELOG.md). Major updates get a new version.
 
 ## License
 
