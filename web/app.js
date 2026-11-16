@@ -185,7 +185,7 @@
   }
   // Temperature ranges: key, label, usual temperature (°C), drawn from/to (°C) on the scale.
   const DOMAINS = [["low", "Low", -12, -40, 5], ["service", "Intermediate", 25, 5, 35], ["high", "High", 50, 35, 70]];
-  const SCALE = [-40, 70];  // °C shown on the scale
+  const SCALE = [-40, 70];  // °C at the left and right ends of the ranges
   const toC = (v, u) => (u === "F" ? (v - 32) * 5 / 9 : v);
   const fromC = (c, u) => (u === "F" ? c * 9 / 5 + 32 : c);
   const tempC = () => { const v = parseFloat(String(S.temp).replace(",", ".")); return isFinite(v) ? toC(v, S.tempUnit) : null; };
@@ -194,25 +194,22 @@
   const clearDomain = (c) => (c == null ? null : c <= 0 ? "low" : c >= 10 && c <= 30 ? "service" : c >= 40 ? "high" : null);
   const minus = (v) => String(v).replace(/^-/, "−");  // typographic minus for display
   const clampC = (c) => Math.min(SCALE[1], Math.max(SCALE[0], c));
-  const pct = (c) => (100 * (clampC(c) - SCALE[0]) / (SCALE[1] - SCALE[0])).toFixed(2);
-  // On phones the three ranges get equal widths, so positions are mapped range by range.
-  const pctPhone = (c) => {
+  // The three ranges are drawn the same width, so the marker is placed range by range.
+  const pctAt = (c) => {
     c = clampC(c);
     const i = DOMAINS.findIndex(([, , , a, b]) => c <= b), [, , , a, b] = DOMAINS[i < 0 ? 2 : i];
     return ((100 / 3) * ((i < 0 ? 2 : i) + (c - a) / (b - a))).toFixed(2);
   };
-  const posStyle = (c) => `--l:${pct(c)}%;--lp:${pctPhone(c)}%`;
+  const posStyle = (c) => `--l:${pctAt(c)}%`;
   function scaleHTML() {
     const u = S.tempUnit, c = tempC();
-    const ticks = u === "F" ? [-40, -20, 0, 20, 40, 60, 80, 100, 120, 140, 160] : [-40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70];
-    const zones = DOMAINS.map(([d, l, typ, a, b]) => `<button class="tzone z-${d}" role="radio" data-act="domain" data-d="${d}" aria-checked="${S.domain === d}" tabindex="${S.domain === d ? 0 : -1}" style="--w:${b - a}">
+    const zones = DOMAINS.map(([d, l, typ, a, b]) => `<button class="tzone z-${d}" role="radio" data-act="domain" data-d="${d}" aria-checked="${S.domain === d}" tabindex="${S.domain === d ? 0 : -1}" >
         <b>${l}</b><span>${minus(fromC(typ, u).toFixed(0))} °${u} typical</span><small>${S.order[d].map((k) => esc(S.specs[k].name)).join(", ")}</small></button>`).join("");
     const hid = c == null ? " hidden" : "", at = posStyle(c == null ? 0 : c);
     return `<div class="tscale">
       <div class="tmark${hid}" id="tmark" style="${at}" aria-hidden="true">${esc(S.temp)} °${u}</div>
       <div class="tzones" role="radiogroup" aria-label="Temperature range">${zones}</div>
       <div class="ttrack" aria-hidden="true"><i class="tdot${hid}" id="tdot" style="${at}"></i></div>
-      <div class="tticks" aria-hidden="true">${ticks.map((v) => `<span style="${posStyle(toC(v, u))}">${minus(v)}</span>`).join("")}</div>
     </div>`;
   }
   function moveMarker() {
