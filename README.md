@@ -1,10 +1,10 @@
-# Cracking Test Analyzer
+# Mix Test Analyzer
 
-A tool for processing asphalt mixture cracking test files.
+A tool for processing asphalt mixture performance test files, for cracking and rutting.
 Upload the load and displacement files from your test frame.
 The tool maps the columns, checks the loading rate, fits the curves and reports the indices.
 
-**Use it online:** https://akashto.com/cracking-index/
+**Use it online:** https://akashto.com/mix-test-analyzer/
 
 It runs entirely in your browser. Your files are read in the page and never uploaded.
 
@@ -12,20 +12,24 @@ It runs entirely in your browser. Your files are read in the page and never uplo
 
 | Domain | Test | Standard | Main outputs |
 |---|---|---|---|
-| Service temperature | I-FIT | AASHTO T 393-21 | Flexibility index, G<sub>f</sub>, post-peak slope |
-| Service temperature | IDEAL-CT | ASTM D8225-19 | CT<sub>index</sub>, G<sub>f</sub>, \|m<sub>75</sub>\|, N<sub>flex</sub> |
-| Service temperature | DONUT | *Draft* ASTM | DONUT index, G<sub>f</sub>, \|S<sub>75</sub>\| |
-| Low temperature | SCB | AASHTO T 394-21 | G<sub>f</sub> with power-law tail, K<sub>IC</sub>, stiffness |
-| Low temperature | SLT-SCB | *Draft* ASTM | LCI, pre-peak G<sub>f</sub>, loading stiffness |
-| Low temperature | DCT | ASTM D7313-20 | G<sub>f</sub> from load vs. measured CMOD (fitted CMOD optional) |
-| Low temperature | IDT strength | AASHTO T 322-07 | Tensile strength. Creep compliance is not supported. |
+| Intermediate | I-FIT | AASHTO T 393-21 | Flexibility index, G<sub>f</sub>, post-peak slope |
+| Intermediate | IDEAL-CT | ASTM D8225-19 | CT<sub>index</sub>, G<sub>f</sub>, \|m<sub>75</sub>\|, N<sub>flex</sub> |
+| Intermediate | DONUT | *Draft* ASTM | DONUT index, G<sub>f</sub>, \|S<sub>75</sub>\| |
+| Low | SCB | AASHTO T 394-21 | G<sub>f</sub> with power-law tail, K<sub>IC</sub>, stiffness |
+| Low | SLT-SCB | *Draft* ASTM | LCI, pre-peak G<sub>f</sub>, loading stiffness |
+| Low | DCT | ASTM D7313-20 | G<sub>f</sub> from load vs. measured CMOD (fitted CMOD optional) |
+| Low | IDT strength | AASHTO T 322-07 | Tensile strength. Creep compliance is not supported. |
+| High | HT-IDT | ASTM D8666-26 | HT-IDT strength S<sub>t,HT</sub> |
+| High | IDEAL-RT | ASTM D8360-22 | RT<sub>Index</sub>, shear strength τ<sub>f</sub> (RT<sub>Index</sub> at 7% air voids optional for cores) |
+
+Low and intermediate temperature tests address cracking. High temperature tests address rutting. HWTT (AASHTO T 324) and APA (AASHTO T 340) are planned.
 
 N<sub>flex</sub> follows Yin et al. (2018). The two draft methods may change before they are published.
 
 ## How it works
 
-1. **Test.** Pick low or service temperature, record the test temperature, and pick the test.
-2. **Upload.** Add one file per replicate (CSV, TXT or XLSX). The tool finds time, load, LLD and CMOD columns and their units. Confirm the mapping. Time is optional for every test except DCT. Without it, the tool still processes the file but skips the loading-rate and sampling checks. If a frame records load or displacement as negative, the tool flips the sign and says so in the checks and the report. It checks the loading rate and sampling rate against the standard and plots each curve.
+1. **Test.** Pick the temperature domain (low, intermediate or high), record the test temperature, and pick the test.
+2. **Upload.** Add one file per replicate (CSV, TXT or XLSX). The tool finds time, load, LLD and CMOD columns and their units. Confirm the mapping. Time is optional for every test. Without it, the tool still processes the file but skips the loading-rate and sampling checks. If a frame records load or displacement as negative, the tool flips the sign and says so in the checks and the report. It checks the loading rate and sampling rate against the standard and plots each curve.
 3. **Process.** Choose raw or fitted data, trims, seating energy and load tare. Look at the fit. Enter the specimen dimensions and the batch details. Then run.
 4. **Results.** Mean, SD and COV of each output, with each replicate's values and checks. Remove one outlier or exclude replicates by hand. Export a zip with:
    - one Excel workbook per replicate (summary, processed data with a chart, fit details),
@@ -74,7 +78,7 @@ No public raw curves were found for these tests. The example curves are made to 
 
 ## Cite
 
-Bajaj, A. (2026). *Cracking Test Analyzer* (Version 0.1). https://akashto.com/cracking-index/
+Bajaj, A. (2026). *Mix Test Analyzer* (Version 0.1). https://akashto.com/mix-test-analyzer/
 
 ## Credits
 
@@ -82,7 +86,7 @@ Developed by Akash Bajaj, University of Illinois Urbana-Champaign.
 
 ## References
 
-The [References page](https://akashto.com/cracking-index/references.html) lists the standard and the key papers for each test.
+The [References page](https://akashto.com/mix-test-analyzer/references.html) lists the standard and the key papers for each test.
 
 
 - AASHTO T 393-21. Determining the Fracture Potential of Asphalt Mixtures Using the Illinois Flexibility Index Test (I-FIT).

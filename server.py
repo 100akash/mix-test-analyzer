@@ -40,5 +40,5 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
-    print(f"Cracking Test Analyzer on http://localhost:{port}/?local=1")
+    print(f"Mix Test Analyzer on http://localhost:{port}/?local=1")
     http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

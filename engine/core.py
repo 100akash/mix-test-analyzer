@@ -1,4 +1,4 @@
-"""Shared numeric tools for the Cracking Test Analyzer.
+"""Shared numeric tools for the Mix Test Analyzer.
 
 Units inside the engine: load in kN, displacement in mm, time in s.
 Work in kN*mm is the same as J.

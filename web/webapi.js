@@ -1,4 +1,4 @@
-/* Cracking Test Analyzer: talks to the calculation engine.
+/* Mix Test Analyzer: talks to the calculation engine.
    Default: a web worker running Python with Pyodide (worker.js). Nothing is sent to a server.
    Developer mode (?local=1 with server.py running): the same engine through a local server. */
 (function () {

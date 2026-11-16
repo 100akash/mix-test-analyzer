@@ -189,3 +189,48 @@ def test_errors_are_readable():
     assert r["ok"] and "not supported" in r["data"]["files"][0]["error"]
     r = json.loads(routes.handle_json("nope", "{}"))
     assert not r["ok"]
+
+
+def _rut_file(name, Pm, u0, rate=50.0, hz=50, lld=True, after=5.0):
+    """Synthetic high-temperature record: rise to Pm at u0, slow drop, stop `after` s past the peak."""
+    v = rate / 60
+    t = np.arange(0, u0 / v + after, 1 / hz)
+    u = v * t
+    x = u / u0
+    P = Pm * np.where(x <= 1, x * np.exp(1 - x), np.exp(-0.5 * (x - 1) ** 2 / 0.6))
+    head = "Time (s),Load (kN)" + (",LLD (mm)" if lld else "")
+    rows = [f"{a:.4f},{b:.5f}" + (f",{c:.4f}" if lld else "") for a, b, c in zip(t, P, u)]
+    return {"name": name, "b64": base64.b64encode(("\n".join([head] + rows) + "\n").encode()).decode()}
+
+
+def test_idealrt_equations():
+    F = call("parse", {"files": [_rut_file(f"rt{i}.csv", Pm, 3.8) for i, Pm in enumerate((5.8, 6.0))]})["files"]
+    pl = payload(F)
+    pl[1]["dims"] = {"t": 62, "D": 150, "av": 8.5}
+    r = call("run", {"test": "idealrt", "settings": {"av7": True}, "files": pl})
+    a, b = r["replicates"]
+    tau = 0.356 * 5800 / (0.062 * 0.0191)
+    assert abs(a["outputs"]["Pmax"] - 5.8) < 1e-3
+    assert abs(a["outputs"]["tau"] - tau / 1000) < 0.5 and abs(a["outputs"]["RT"] - 6.618e-5 * tau) < 0.05
+    assert a["warnings"] and "Air voids" in a["warnings"][0]  # av7 on, no air voids
+    assert abs(b["outputs"]["RT7"] - 0.446 * math.exp(0.1186 * 8.5) * b["outputs"]["RT"]) < 1e-6
+    assert a["checks"]["rate"]["ok"] and a["checks"]["hz"]["ok"]
+
+
+def test_htidt_strength_without_lld():
+    F = call("parse", {"files": [_rut_file("ht.csv", 2.5, 2.0, rate=50.8, lld=False, after=20)]})["files"]
+    r = call("run", {"test": "htidt", "settings": {}, "files": payload(F)})["replicates"][0]
+    assert abs(r["outputs"]["St_HT"] - 2000 * 2500 / (math.pi * 62 * 150)) < 1.0
+    assert r["checks"]["rate"]["ok"] is None and r["checks"]["hz"]["ok"]
+    F = call("parse", {"files": [_rut_file("ht2.csv", 2.5, 2.0, rate=50.8, after=20)]})["files"]
+    r = call("run", {"test": "htidt", "settings": {}, "files": payload(F)})["replicates"][0]
+    assert r["checks"]["rate"]["ok"] and abs(r["checks"]["rate"]["value"] - 50.8) < 0.5
+
+
+def test_rutting_exports():
+    for test, kw, st in (("idealrt", {}, {"av7": True}), ("htidt", {"rate": 50.8, "lld": False, "after": 20}, {})):
+        F = call("parse", {"files": [_rut_file(f"{test}{i}.csv", 2.5 + 0.2 * i, 2.0, **kw) for i in range(3)]})["files"]
+        r = call("run", {"test": test, "settings": st, "files": payload(F)})
+        e = call("export", {"run": r["run"], "batch": {"project": "P", "mix": "M"}, "included": [True] * 3, "options": {"format": "xlsx"}})
+        names = zipfile.ZipFile(io.BytesIO(base64.b64decode(e["b64"]))).namelist()
+        assert any(n.endswith(".pdf") for n in names) and sum(n.endswith(".xlsx") for n in names) >= 4, names

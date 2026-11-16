@@ -78,7 +78,7 @@ def _record(fid, roles, units, test):
         (r == "time" and not rec["has_time"]) or (r == "lld" and rec["u"] is None) or (r == "cmod" and rec["cmod"] is None))]
     if test == "dct" and rec["u"] is None:
         rec["u"] = rec["cmod"]
-    if rec["u"] is None and test != "idt":
+    if rec["u"] is None and test not in ("idt", "htidt"):
         raise ValueError("No LLD column is mapped.")
     rec["missing"] = missing
     return rec
@@ -158,7 +158,8 @@ def _dims(test, dims):
         v = dims.get(d["key"])
         if d.get("derived") or v is None:
             continue
-        if "lo" in d and not (d["lo"] <= v <= d["hi"]):
+        alt = d.get("alt")
+        if "lo" in d and not (d["lo"] <= v <= d["hi"]) and not (alt and alt[0] <= v <= alt[1]):
             bad.append(f"{d['label']} {v:g} mm is outside {d['lo']:g} to {d['hi']:g} mm")
     return {"ok": not bad, "text": "; ".join(bad)}
 
@@ -189,7 +190,7 @@ def _clean_dims(test, dims):
 def _settings(test, st):
     spec = specs.TESTS[test]
     s = {"mode": spec["mode"], "start_load": spec["start_load"], "end_load": spec["end_load"],
-         "seating": spec["seating"], "tare": False, "poisson": "fixed", "mu": 0.35, "mix": "design", "window": 0.15}
+         "seating": spec["seating"], "tare": False, "poisson": "fixed", "mu": 0.35, "mix": "design", "window": 0.15, "av7": False}
     for k, v in (st or {}).items():
         if v is not None and v != "":
             s[k] = v

@@ -1,4 +1,4 @@
-/* Cracking Test Analyzer: page logic. Four steps: test, upload, process, results.
+/* Mix Test Analyzer: page logic. Four steps: test, upload, process, results.
    All calculations run in the engine (Python, in this tab). */
 (function () {
   "use strict";
@@ -11,7 +11,7 @@
   /* ------------------------------------------------------------ state */
   const S = {
     step: 1, specs: null, order: null,
-    domain: "service", test: "ifit", temp: "25.0", tempUnit: "C",
+    domain: "service", test: "ifit", soon: {}, temp: "25.0", tempUnit: "C",
     files: [], active: null, confirmed: {}, checks: {}, previewFile: null,
     settings: {}, dimMode: "avg", dims: {}, labels: {},
     batch: { project: "", mix: "", date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10), vma: "", nmas: "", binder: "", pg: "" },
@@ -109,7 +109,7 @@
     else if (S.step === 2) {
       const gs = groups(), open = gs.findIndex(([s]) => !S.confirmed[s]);
       const bad = S.files.filter((f) => { const c = S.checks[f.id]; return c && ((c.rate && c.rate.ok === false) || (c.hz && c.hz.ok === false)); }).length;
-      if (!S.files.length) { txt = "Add one file per replicate, or load the example files to try the tool."; btn = `<button class="btn small" data-act="examples">Load example files</button>`; }
+      if (!S.files.length) { txt = EXAMPLES[S.test] ? "Add one file per replicate, or load the example files to try the tool." : "Add one file per replicate."; btn = EXAMPLES[S.test] ? `<button class="btn small" data-act="examples">Load example files</button>` : ""; }
       else if (open >= 0) { txt = `Check the column mapping for Format ${String.fromCharCode(65 + open)} and confirm it.`; btn = `<button class="btn primary small" data-act="gconfirm" data-sig="${esc(gs[open][0])}">Show mapping</button>`; }
       else { txt = bad ? `Mapping confirmed. ${bad} file${bad === 1 ? " has" : "s have"} a rate or sampling warning. You can still continue.` : "Mapping confirmed and loading checks pass. Continue to processing."; btn = `<button class="btn primary small" data-go="3">Continue to processing</button>`; }
     } else if (S.step === 3) {
@@ -163,26 +163,41 @@
         <span class="small muted oneline" title="${esc(t.temp_note)}">${esc(t.temp_note)}</span>
         <button class="btn${cur ? " navy" : ""}" data-act="pick" data-k="${k}">${cur ? "Selected" : "Select"}</button>
       </article>`;
-    }).join("");
+    }).join("") + (S.soon[S.domain] || []).map((x) => `<article class="tcard soon" aria-disabled="true">
+        <span class="tag">Coming soon</span>
+        <div class="art">${ART[x.key] || ""}</div>
+        <h3>${esc(x.name)}</h3>
+        <span class="std">${esc(x.standard)}</span>
+        <p class="small muted">Not available yet.</p>
+      </article>`).join("");
+    const di = DOMAINS.findIndex((d) => d[0] === S.domain);
+    const slider = `<div class="tslider" role="radiogroup" aria-label="Temperature domain" data-i="${di}">
+      <div class="tsl-track" aria-hidden="true"></div>
+      ${DOMAINS.map(([d, l, sub]) => `<button class="tsl-stop" role="radio" data-act="domain" data-d="${d}" aria-checked="${S.domain === d}" tabindex="${S.domain === d ? 0 : -1}">
+        <i class="tsl-dot" aria-hidden="true"></i><b>${l}</b><span>${sub}</span><small>${S.order[d].map((k) => esc(S.specs[k].name)).join(", ")}</small></button>`).join("")}
+    </div>`;
     return `<section class="stack"><h1>Choose your test</h1>
       <p class="lead">Pick the temperature domain, record the test temperature, then select the test you ran. You only process the test you need.</p></section>
       <section class="card">
-        <div class="grid2">
-          <div class="stack"><span class="label">Temperature domain</span>
-            <div class="domain">
-              <button data-act="domain" data-d="low" aria-pressed="${S.domain === "low"}"><b>Low temperature</b><span>SCB, SLT-SCB, DCT, IDT strength</span></button>
-              <button data-act="domain" data-d="service" aria-pressed="${S.domain === "service"}"><b>Service temperature</b><span>I-FIT, IDEAL-CT, DONUT</span></button>
-            </div></div>
-          <div class="stack"><span class="label">Test temperature (record only)</span>
+        <div class="stack"><span class="label">Temperature domain</span>${slider}</div>
+        <div class="stack tempin"><span class="label">Test temperature (record only)</span>
             <div class="row"><input type="text" inputmode="decimal" class="num" id="temp" value="${esc(S.temp)}" aria-label="Test temperature">
               <div class="seg" role="group" aria-label="Temperature unit"><button data-act="tunit" data-u="C" aria-pressed="${S.tempUnit === "C"}">°C</button><button data-act="tunit" data-u="F" aria-pressed="${S.tempUnit === "F"}">°F</button></div></div>
             <span class="small muted">The usual temperature is on each card.</span>
           </div>
-        </div>
       </section>
       <section class="tests">${cards}</section>
       <div class="foot"><span>Selected: <strong>${esc(sp.name)}</strong> at ${esc(S.temp || "–")} °${S.tempUnit}</span>
         <button class="btn primary" data-go="2">Continue to upload</button></div>`;
+  }
+  // temperature domains: key, label, what the tests in it address, usual starting temperature (°C)
+  const DOMAINS = [["low", "Low", "Thermal cracking", -12], ["service", "Intermediate", "Fatigue cracking", 25], ["high", "High", "Rutting", 50]];
+  function setDomain(d) {
+    if (S.domain === d) return;
+    S.domain = d; S.test = S.order[d][0];
+    const c = DOMAINS.find((x) => x[0] === d)[3];
+    S.temp = (S.tempUnit === "F" ? c * 9 / 5 + 32 : c).toFixed(1);
+    resetForTest();
   }
   const fmtRate = (r) => (r < 0.01 ? String(r) : String(+r.toFixed(3)));
   function needsText(t) {
@@ -235,8 +250,8 @@
           <div class="drop" id="drop"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14" stroke="#13294B" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
             <strong>Drop CSV, TXT or XLSX files here</strong><span class="small muted">Select several at once.</span>
             <div class="row"><label class="btn navy">Browse files<input type="file" id="fileinput" multiple accept=".csv,.txt,.tsv,.dat,.xlsx,.xlsm" class="hidden"></label>
-            <button class="btn" data-act="examples">Load example files</button></div>
-            <span class="small muted">${["scb", "idt"].includes(S.test) ? "Example files are synthetic curves. Mix A first, then Mix B for a second batch." : "Example files are lab records with names and dates removed. Mix A first, then Mix B for a second batch."}</span>
+            ${EXAMPLES[S.test] ? `<button class="btn" data-act="examples">Load example files</button>` : ""}</div>
+            <span class="small muted">${!EXAMPLES[S.test] ? "Example files for this test are coming soon." : ["scb", "idt"].includes(S.test) ? "Example files are synthetic curves. Mix A first, then Mix B for a second batch." : "Example files are lab records with names and dates removed. Mix A first, then Mix B for a second batch."}</span>
           </div>
           ${errs}
           ${gs.length ? `<div class="groups">${gHtml}</div>
@@ -317,7 +332,7 @@
   /* ------------------------------------------------------------ step 3: process */
   function defaultsFor(test) {
     const t = S.specs[test];
-    return { mode: t.mode, start_load: t.start_load, end_load: t.end_load, seating: t.seating, tare: false, poisson: "fixed", mu: 0.35, mix: "design", window: 0.15 };
+    return { mode: t.mode, start_load: t.start_load, end_load: t.end_load, seating: t.seating, tare: false, poisson: "fixed", mu: 0.35, mix: "design", window: 0.15, av7: false };
   }
   function viewProcess() {
     const sp = spec(), st = S.settings;
@@ -343,6 +358,7 @@
         <div class="seg" role="group"><button data-act="poisson" data-v="fixed" aria-pressed="${st.poisson === "fixed"}">Fixed 0.35</button><button data-act="poisson" data-v="sc" aria-pressed="${st.poisson === "sc"}">From secant stiffness</button></div>
         ${st.poisson === "sc" ? `<div class="seg" role="group"><button data-act="mix" data-v="design" aria-pressed="${st.mix === "design"}">N<sub>design</sub> specimens</button><button data-act="mix" data-v="av7" aria-pressed="${st.mix === "av7"}">7% air voids</button></div>` : ""}
         <span class="small muted">Yin et al. (2018). μ = 0.15 + 0.35/(1 + e<sup>a + b·S<sub>c</sub></sup>), S<sub>c</sub> = P<sub>max</sub>/Δ<sub>Pmax</sub>.</span></div>` : ""}
+      ${S.test === "idealrt" ? `<label class="toggle"><input type="checkbox" data-set="av7" ${st.av7 ? "checked" : ""}><span>Also report RT<sub>Index</sub> at 7% air voids<small>For field cores outside 7.0 ± 0.5% air voids (D8360 Note 11): 0.446·e<sup>0.1186·AV</sup>·RT<sub>Index</sub>. Uses the air voids you enter for each specimen.</small></span></label>` : ""}
       ${dev.length ? `<div class="notice">Changed from ${std}: ${dev.join(", ")}. This is flagged in the report.</div>` : ""}
       <button class="linkbtn" data-act="resetset">Reset to ${std} defaults</button>
     </section>`;
@@ -513,6 +529,7 @@
     chips.push(`<span class="chip">Load tare ${st.tare ? "on" : "off"}</span>`, `<span class="chip">Trim ${st.start_load} / ${st.end_load} kN</span>`, `<span class="chip">Zero at start load</span>`);
     if (run.test === "idealct") chips.push(`<span class="chip">μ ${st.poisson === "fixed" ? "fixed 0.35" : "from S<sub>c</sub>, " + (st.mix === "design" ? "N<sub>design</sub>" : "7% AV")}</span>`);
     const allChecks = reps.every((r) => r.checks && r.checks.rate.ok !== false && r.checks.hz.ok !== false);
+    const unchecked = reps.some((r) => r.checks && (r.checks.rate.ok == null || r.checks.hz.ok == null));
     const tiles = sp.outputs.filter((o) => o.main).map((o, k) => {
       const s = stats(reps.map((r, i) => (inc[i] && r.outputs ? r.outputs[o.key] : null)));
       const sAll = stats(reps.map((r) => (r.outputs ? r.outputs[o.key] : null)));
@@ -562,7 +579,7 @@
     return `<section class="stack"><h1>Results</h1>
       <p class="lead">${S.batches.length ? `Batch ${S.no} · ` : ""}${esc(sp.name)} · ${std} · ${esc(S.temp)} °${S.tempUnit}${S.batch.project ? " · " + esc(S.batch.project) : ""}${S.batch.mix ? " · " + esc(S.batch.mix) : ""}</p>
       <div class="row">${chips.join("")}</div>
-      <p class="small ${allChecks ? "ok" : "warn"}">${reps.length} replicate${reps.length === 1 ? "" : "s"} · ${allChecks ? "all rate and sampling checks pass" : "some checks warn"} · ${reps.length - nInc} excluded</p></section>
+      <p class="small ${allChecks ? "ok" : "warn"}">${reps.length} replicate${reps.length === 1 ? "" : "s"} · ${!allChecks ? "some checks warn" : unchecked ? "no check fails, some were not run" : "all rate and sampling checks pass"} · ${reps.length - nInc} excluded</p></section>
       <section class="tiles">${tiles}</section>
       ${(() => { const cv = idxCov(); return cv != null && cv > COV_FLAG && nInc >= 3 ? `<div class="notice">The ${esc(S.short[sp.index] || sp.index)} COV of the included set is ${cv.toFixed(1)}%. Check the curves and the "Remove one outlier" option. The tool flags a COV above ${COV_FLAG}%.</div>` : ""; })()}
       ${nInc < sp.min_reps ? `<div class="notice">Only ${nInc} replicate${nInc === 1 ? " is" : "s are"} included. ${std} asks for at least ${sp.min_reps} specimens per result.</div>` : ""}
@@ -958,20 +975,23 @@
   }
 
   /* ------------------------------------------------------------ events */
+  app.addEventListener("keydown", (e) => {
+    const t = e.target.closest(".tsl-stop");
+    if (!t) return;
+    const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+    if (step == null && e.key !== "Home" && e.key !== "End") return;
+    e.preventDefault();
+    const i = DOMAINS.findIndex((d) => d[0] === S.domain);
+    const j = e.key === "Home" ? 0 : e.key === "End" ? DOMAINS.length - 1 : Math.min(DOMAINS.length - 1, Math.max(0, i + step));
+    setDomain(DOMAINS[j][0]); render();
+    const n = app.querySelector(`.tsl-stop[data-d="${DOMAINS[j][0]}"]`); if (n) n.focus();
+  });
   app.addEventListener("click", (e) => {
     const t = e.target.closest("[data-act],[data-go]");
     if (!t || t.disabled) return;
     if (t.dataset.go) return go(+t.dataset.go);
     const a = t.dataset.act;
-    if (a === "domain") {
-      if (S.domain !== t.dataset.d) {
-        S.domain = t.dataset.d; S.test = S.order[S.domain][0];
-        const c = S.domain === "low" ? -12 : 25;  // usual starting values: 25 °C service, −12 °C low temperature
-        S.temp = (S.tempUnit === "F" ? c * 9 / 5 + 32 : c).toFixed(1);
-        resetForTest();
-      }
-      render();
-    }
+    if (a === "domain") { setDomain(t.dataset.d); render(); }
     else if (a === "pick") { if (S.test !== t.dataset.k) { S.test = t.dataset.k; resetForTest(); } render(); }
     else if (a === "tunit") {
       const u = t.dataset.u, v = parseFloat(S.temp);
@@ -1072,11 +1092,11 @@
   (async function boot() {
     try {
       const r = await API("tests");
-      S.specs = r.tests; S.order = r.order; S.short = r.short || {};
+      S.specs = r.tests; S.order = r.order; S.soon = r.soon || {}; S.short = r.short || {};
       S.settings = defaultsFor(S.test);
       render();
     } catch (e) {
-      app.innerHTML = `<div class="boot"><h1>Cracking Test Analyzer</h1><p class="err">${esc(e.message)}</p><p>Reload the page to try again.</p></div>`;
+      app.innerHTML = `<div class="boot"><h1>Mix Test Analyzer</h1><p class="err">${esc(e.message)}</p><p>Reload the page to try again.</p></div>`;
     }
   })();
 

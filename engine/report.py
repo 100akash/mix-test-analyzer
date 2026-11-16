@@ -78,7 +78,7 @@ def _replicate_xlsx(run, rep, batch, included, reason):
     r = 1
     ws.cell(r, 1, f"{spec['name']} · {_std_plain(spec)}").font = Font(bold=True, size=14)
     r += 1
-    ws.cell(r, 1, f"Cracking Test Analyzer v{VERSION} · akashto.com/cracking-index")
+    ws.cell(r, 1, f"Mix Test Analyzer v{VERSION} · akashto.com/mix-test-analyzer")
     r += 2
     r = section(r, "Replicate")
     for k, v in [("Label", rep["label"]), ("File", rep["file"]), ("Status", "Included" if included else f"Excluded · {reason}"),
@@ -334,7 +334,7 @@ def _pdf(run, batch, mask, reasons):
         fig.text(0.07, 0.955, title, fontsize=15, weight="bold", color=NAVY)
         fig.text(0.07, 0.935, sub, fontsize=9, color="#4A4A47")
         fig.add_artist(plt.Line2D([0.07, 0.93], [0.925, 0.925], color=ORANGE, lw=2))
-        fig.text(0.07, 0.03, "Cracking Test Analyzer v" + VERSION + " · akashto.com/cracking-index · Check results against the standard before use.",
+        fig.text(0.07, 0.03, "Mix Test Analyzer v" + VERSION + " · akashto.com/mix-test-analyzer · Check results against the standard before use.",
                  fontsize=7, color="#6A6862")
         fig.text(0.93, 0.03, f"Page {page} of {pages}", fontsize=7, color="#6A6862", ha="right")
 
@@ -540,6 +540,9 @@ def _method_text(test, st):
                 "The CMOD rate check uses the slope of that line.",
                 "Other index, not part of D7313: FST = Gf / Sf (Zhu et al. 2017), with fracture strength Sf = 2 Pmax (3W − a) / (B a²), a the ligament length and W the distance from the load line to the back edge (Apeagyei et al. 2006). FST is reported in 10^-6 m."],
         "idt": ["S_t = 2 P_f / (π b D), with P_f the peak load (T 322, 12.3). Creep compliance is not computed."],
+        "htidt": ["S_t,HT = 2000 P_max / (π t D), kPa, with P_max in N and t, D in mm (D8666, Eq 1). The record ends where the load drops below 100 N."],
+        "idealrt": ["τ_f = 0.356 P_max / (t w), Pa, with w = 0.0191 m (D8360, Eq 1). RT_Index = 6.618 × 10⁻⁵ τ_f / 1 Pa (Eq 2)."]
+                   + (["RT_Index at 7% air voids = 0.446 e^(0.1186 AV) RT_Index, for field cores (Note 11)."] if st.get("av7") else []),
     }[test]
     return [common] + t
 
@@ -569,7 +572,7 @@ def build_zip(run, body):
         z.writestr(f"{base}_batch-summary.xlsx", _summary_xlsx(run, batch, mask, reasons))
         z.writestr(f"{base}_summary.pdf", _pdf(run, batch, mask, reasons))
         settings = {
-            "tool": f"Cracking Test Analyzer v{VERSION}", "test": run["test"], "standard": _std_plain(spec),
+            "tool": f"Mix Test Analyzer v{VERSION}", "test": run["test"], "standard": _std_plain(spec),
             "batch": batch, "settings": {k: v for k, v in run["settings"].items()},
             "replicates": [{"label": r["label"], "file": r["file"], "mapping": r["mapping"], "dimensions": r["res"]["dims"],
                             "included": m, "reason": why} for r, m, why in zip(reps, mask, reasons)],

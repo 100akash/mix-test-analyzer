@@ -1,4 +1,4 @@
-/* Cracking Test Analyzer: runs the Python engine (engine/*.py) in the browser with Pyodide.
+/* Mix Test Analyzer: runs the Python engine (engine/*.py) in the browser with Pyodide.
    The page sends {id, path, body}; the worker answers {id, out} where out is a JSON string.
    Files never leave this tab. */
 const q = new URL(self.location.href).searchParams;

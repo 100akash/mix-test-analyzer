@@ -462,4 +462,68 @@ def idt(rec, dims, st):
     return dict(outputs=out, warnings=warn, notes=notes, plot=plot, fit={}, cols=cols, pr=pr)
 
 
-ANALYZE = {"ifit": ifit, "idealct": idealct, "donut": donut, "scb": scb, "sltscb": sltscb, "dct": dct, "idt": idt}
+# ===================================================================== HT-IDT
+def htidt(rec, dims, st):
+    """ASTM D8666-26: S_t,HT = 2000 P / (pi t D), kPa, with P in N and t, D in mm."""
+    t_, D = dims["t"], dims["D"]
+    warn, notes = [], []
+    P = np.asarray(rec["P"], float)
+    t = np.asarray(rec["t"], float) if rec.get("t") is not None else np.arange(len(P), dtype=float)
+    u = np.asarray(rec["u"], float) if rec.get("u") is not None else np.full(len(P), np.nan)
+    if st.get("tare"):
+        P = P - P[0]
+    ok = np.isfinite(P)
+    P, t, u = P[ok], t[ok], u[ok]
+    ip = int(np.argmax(P))
+    above = np.where(P[: ip + 1] >= st["start_load"])[0]
+    i0 = int(above[0]) if len(above) else 0
+    below = np.where(P[ip:] < st["end_load"])[0]
+    i1 = ip + int(below[0]) if len(below) else len(P)
+    P, t, u = P[i0:i1], t[i0:i1] - t[i0], u[i0:i1]
+    ip -= i0
+    has_u = bool(np.isfinite(u).all())
+    u0 = u - u[0] if has_u else u
+    Pm = float(P[ip])
+    S = 2000 * (Pm * 1000) / (math.pi * t_ * D)
+    out = {"Pmax": Pm, "St_HT": S, "St_HT_psi": S * 0.1450377, "t_peak": float(t[ip]),
+           "u_peak": float(u0[ip]) if has_u else float("nan")}
+    x = u0 if has_u else t
+    plot = {"x": "LLD (mm)" if has_u else "Time (s)", "y": "Load (kN)",
+            "series": [{"name": "Raw data", "cls": "raw", "pts": _pts(x, P)}],
+            "points": [{"name": "Peak", "x": float(x[ip]), "y": Pm}], "lines": []}
+    pr = {"t": t, "P": P, "u": u0, "ip": ip, "info": {"end_found": bool(len(below))}, "full": None}
+    cols = {"Time (s)": t, "LLD zeroed (mm)": u0, "Load (kN)": P}
+    return dict(outputs=out, warnings=warn, notes=notes, plot=plot, fit={}, cols=cols, pr=pr)
+
+
+# =================================================================== IDEAL-RT
+RT_W = 0.0191  # width of the upper loading strip, m (D8360, Eq 1)
+
+
+def idealrt(rec, dims, st):
+    """ASTM D8360-22: tau_f = 0.356 Pmax / (t w), Pa; RTIndex = 6.618e-5 tau_f / 1 Pa."""
+    warn, notes = [], []
+    pr = _base(rec, st)
+    t, P, u, ip = pr["t"], pr["P"], pr["u"], pr["ip"]
+    out = _common_out(pr)
+    tau = 0.356 * out["Pmax"] * 1000 / (dims["t"] / 1000 * RT_W)
+    out["tau"] = tau / 1000
+    out["RT"] = 6.618e-5 * tau
+    out["RT7"] = float("nan")
+    if st.get("av7"):
+        av = dims.get("av")
+        if av is None:
+            warn.append("Air voids not entered. RT<sub>Index</sub> at 7% air voids was not computed.")
+        else:
+            out["RT7"] = 0.446 * math.exp(0.1186 * av) * out["RT"]
+            if 6.5 <= av <= 7.5:
+                notes.append(f"Air voids {av:g}% are within 7.0 ± 0.5%. D8360 Note 11 is meant for cores outside that range.")
+    plot = {"x": "LLD (mm)", "y": "Load (kN)",
+            "series": [{"name": "Raw data", "cls": "raw", "pts": _pts(u, P)}],
+            "points": [{"name": "Peak", "x": float(u[ip]), "y": float(P[ip])}], "lines": []}
+    cols = {"Time (s)": t, "LLD zeroed (mm)": u, "Load (kN)": P}
+    return dict(outputs=out, warnings=warn, notes=notes, plot=plot, fit={}, cols=cols, pr=pr)
+
+
+ANALYZE = {"ifit": ifit, "idealct": idealct, "donut": donut, "scb": scb, "sltscb": sltscb, "dct": dct, "idt": idt,
+           "htidt": htidt, "idealrt": idealrt}

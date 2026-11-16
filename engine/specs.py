@@ -297,18 +297,90 @@ TESTS = {
                  "Roque, R., and Buttlar, W.G. (1992). The development of a measurement and analysis system to accurately determine asphalt concrete properties using the indirect tensile mode. Journal of the Association of Asphalt Paving Technologists, 61, 304-332.",
                  "Kennedy, T.W. (1977). Characterization of asphalt pavement materials using the indirect tensile test. Proceedings of the Association of Asphalt Paving Technologists, 46, 132-150."],
     },
+    "htidt": {
+        "name": "HT-IDT",
+        "domain": "high",
+        "standard": "ASTM D8666-26",
+        "geometry": "indirect tension",
+        "control": "lld", "control_label": "LLD-control",
+        "rate": 50.8, "rate_tol": 2.0, "rate_unit": "mm/min",
+        "min_hz": 40,
+        "needs": ["load"], "optional": ["time", "lld"],
+        "mode": "raw",
+        "start_load": 0.1, "end_load": 0.1,
+        "seating": False, "seating_note": "Not used.",
+        "fit_note": "Peak load from the recorded data. The record ends where the load drops below 100 N (D8666, 10.5).",
+        "dims": [
+            {"key": "t", "label": "Thickness t", "unit": "mm", "default": 62.0, "lo": 61.0, "hi": 63.0, "alt": [94.0, 96.0], "readings": 4},
+            {"key": "D", "label": "Diameter D", "unit": "mm", "default": 150.0, "lo": 148.0, "hi": 152.0, "readings": 2},
+        ],
+        "dims_note": "D8666: t 62 ± 1 mm (95 ± 1 mm for NMAS 25 mm or more), D 150 ± 2 mm. Cores may be 38 to 95 mm thick.",
+        "temp_note": "Temp: 50 ± 15 °C, by climate",
+        "min_reps": 3,
+        "index": "St_HT",
+        "outputs": [
+            {"key": "St_HT", "label": "HT-IDT strength S<sub>t,HT</sub>", "unit": "kPa", "dp": 0, "main": True},
+            {"key": "Pmax", "label": "Peak load P<sub>max</sub>", "unit": "kN", "dp": 3, "main": True},
+            {"key": "St_HT_psi", "label": "HT-IDT strength S<sub>t,HT</sub>", "unit": "psi", "dp": 1},
+            {"key": "t_peak", "label": "Time at peak", "unit": "s", "dp": 2},
+            {"key": "u_peak", "label": "LLD at peak", "unit": "mm", "dp": 2},
+            {"key": "rate", "label": "LLD rate", "unit": "mm/min", "dp": 1},
+        ],
+        "table": ["Pmax", "St_HT"],
+        "refs": ["ASTM D8666-26. Determination of Rutting Resistance Using High Temperature Indirect Tensile (HT-IDT) Strength of Asphalt Mixtures.",
+                 "Boz, I., Diefenderfer, S.D., Habbouche, J.H., and Seitllari, A. (2025). Interlaboratory Study for the Indirect Tensile at High Temperature Test and Ideal Rutting Test. Report VTRC 25-R14, Virginia Department of Transportation. https://rosap.ntl.bts.gov/view/dot/80169"],
+    },
+    "idealrt": {
+        "name": "IDEAL-RT",
+        "domain": "high",
+        "standard": "ASTM D8360-22",
+        "geometry": "shear in a cradle",
+        "control": "lld", "control_label": "LLD-control",
+        "rate": 50.0, "rate_tol": 2.0, "rate_unit": "mm/min",
+        "min_hz": 40,
+        "needs": ["load", "lld"], "optional": ["time"],
+        "mode": "raw",
+        "start_load": 0.1, "end_load": 0.1,
+        "seating": False, "seating_note": "Not used.",
+        "fit_note": "Peak load from the recorded data. D8360 lets the test stop 5 s after the peak.",
+        "dims": [
+            {"key": "t", "label": "Thickness t", "unit": "mm", "default": 62.0, "lo": 61.0, "hi": 63.0, "alt": [94.0, 96.0], "readings": 4},
+            {"key": "D", "label": "Diameter D", "unit": "mm", "default": 150.0, "lo": 148.0, "hi": 152.0, "readings": 2},
+        ],
+        "dims_note": "D8360: t 62 ± 1 mm (95 ± 1 mm for NMAS 25 mm or more), D 150 ± 2 mm. Cores may be 38 to 95 mm thick.",
+        "temp_note": "Temp: 50 ± 15 °C, by climate",
+        "min_reps": 3,
+        "index": "RT",
+        "outputs": [
+            {"key": "RT", "label": "Rutting tolerance index RT<sub>Index</sub>", "unit": "", "dp": 1, "main": True},
+            {"key": "tau", "label": "Shear strength τ<sub>f</sub>", "unit": "kPa", "dp": 3, "main": True},
+            {"key": "Pmax", "label": "Peak load P<sub>max</sub>", "unit": "kN", "dp": 3, "main": True},
+            {"key": "RT7", "label": "RT<sub>Index</sub> at 7% air voids (field cores, D8360 Note 11)", "unit": "", "dp": 1},
+            {"key": "u_peak", "label": "LLD at peak", "unit": "mm", "dp": 2},
+            {"key": "t_peak", "label": "Time at peak", "unit": "s", "dp": 2},
+            {"key": "rate", "label": "LLD rate", "unit": "mm/min", "dp": 1},
+        ],
+        "table": ["Pmax", "tau", "RT"],
+        "refs": ["ASTM D8360-22. Determination of Rutting Tolerance Index of Asphalt Mixture Using the Ideal Rutting Test.",
+                 "Zhou, F., Crockford, W., Zhang, J., Hu, S., Epps, J., and Sun, L. (2019). Development of an IDEAL rutting test for asphalt mixture design, quality control and quality assurance. Journal of the Association of Asphalt Paving Technologists, 88.",
+                 "Boz, I., Diefenderfer, S.D., Habbouche, J.H., and Seitllari, A. (2025). Interlaboratory Study for the Indirect Tensile at High Temperature Test and Ideal Rutting Test. Report VTRC 25-R14, Virginia Department of Transportation. https://rosap.ntl.bts.gov/view/dot/80169"],
+    },
 }
 
 SHORT = {"Pmax": "Pmax kN", "u0": "u0 mm", "Gf": "Gf J/m²", "m_abs": "|m| kN/mm", "FI": "FI", "m75_abs": "|m75| N/m",
          "CT": "CT index", "Nflex": "Nflex", "l75": "l75 mm", "P100": "P100 kN", "l100": "l100 mm", "S75_abs": "|S75| kN/mm",
          "DI": "DI", "KIC": "KIC", "S": "S kN/mm", "Gf_pre": "Gf-pre J/m²", "LCI": "LCI", "t_peak": "t peak s",
-         "rate": "Rate mm/s", "St": "St MPa", "St_psi": "St psi"}
+         "rate": "Rate mm/s", "St": "St MPa", "St_psi": "St psi",
+         "St_HT": "St,HT kPa", "tau": "τf kPa", "RT": "RTIndex"}
 
-ORDER = {"service": ["ifit", "idealct", "donut"], "low": ["scb", "sltscb", "dct", "idt"]}
+ORDER = {"low": ["scb", "sltscb", "dct", "idt"], "service": ["ifit", "idealct", "donut"], "high": ["htidt", "idealrt"]}
+
+# Shown greyed out on the High card row. Not processed yet.
+SOON = {"high": [{"key": "hwtt", "name": "HWTT", "standard": "AASHTO T 324"}, {"key": "apa", "name": "APA", "standard": "AASHTO T 340"}]}
 
 
 def public():
-    return {"tests": TESTS, "order": ORDER, "short": SHORT}
+    return {"tests": TESTS, "order": ORDER, "soon": SOON, "short": SHORT}
 
 
 def target(spec):
